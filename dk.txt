@@ -1,0 +1,66 @@
+import express, { Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
+import { dirname, join } from 'path/posix';
+import  validate  from '../../middleware/validation';
+import  {resizeImage} from '../../utilities/imgProc';
+import { QueuingStrategy } from 'stream/web';
+import { AsyncLocalStorage } from 'async_hooks';
+
+
+
+const routes = express.Router();
+
+routes.get('/', validate,(req: Request, res:Response) : string|any=> {
+    const  {filename} = req.query;
+    // var url;
+    const imagepath2:string= join(
+        __dirname,
+        '../../../assist/images',
+        `${filename}.jpg`);
+    
+           if(req.query.width || req.query.height )
+            { 
+            const w = Number(req.query.width);
+            const h = Number(req.query.height);
+            
+            const url_:string = join( 
+                __dirname,
+                '../../../assist/modifiedIMG' ,
+                `${filename}`+w+h+`.jpg`);
+            console.log(url_);
+            // is the image already resized
+            if(fs.existsSync(url_)){
+                return res.sendFile(url_); 
+            }    
+            else
+               if (!fs.existsSync(url_))
+                    {
+                         console.log("add img to dir");
+                        resizeImage(url_,w,h);
+                        fs.copyFile(imagepath2, url_, (err) => {
+                        if (err) throw err;
+                        console.log('File was copied to destination');
+                        });
+                    
+                    }
+                    
+                  //  return res.sendFile(url);   
+            }
+            // When the user didn't ask for sizing..
+            else
+            { 
+        
+               if(fs.existsSync(imagepath2))
+                {
+                 return res.sendFile(imagepath2); 
+                }
+                
+                else 
+                 return res.status(404).send('Error image not found');
+                
+            }
+          
+        
+});
+export default routes; 
